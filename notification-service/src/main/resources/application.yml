@@ -1,0 +1,31 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: notification-service
+
+  # Kafka configurations (resilient to connection failure)
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        max.poll.interval.ms: 3000
+        session.timeout.ms: 3000
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+  kafka:
+    bootstrap-servers: kafka:29092

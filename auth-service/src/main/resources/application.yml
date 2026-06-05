@@ -1,0 +1,55 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+  
+  # Default local profile: H2 Database
+  datasource:
+    url: jdbc:h2:mem:authdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password: password
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  # Redis config with connection error tolerance
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 500ms
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+# JWT configuration keys
+prymo:
+  auth:
+    secret-key: "PrymoSecureHoldBankingBackendJWTSecretSuperSecretKey123PrymoSecureHoldBankingBackendJWTSecretSuperSecretKey123"
+    token-expiration-ms: 86400000 # 24 Hours
+
+---
+# Production Profile: PostgreSQL + Kafka/Redis Container Deployment
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:postgresql://postgres:5432/prymo_user_db
+    username: postgres
+    password: postgres
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update

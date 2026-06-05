@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: prymo-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - prymo-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: prymo-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - prymo-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: prymo-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - prymo-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: prymo-kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - prymo-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.1
+    container_name: prymo-keycloak
+    command: start-dev
+    ports:
+      - "7080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/postgres
+      - KC_DB_USERNAME=postgres
+      - KC_DB_PASSWORD=postgres
+    depends_on:
+      - postgres
+    networks:
+      - prymo-network
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  prymo-network:
+    driver: bridge
