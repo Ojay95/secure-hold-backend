@@ -30,7 +30,7 @@ public class GatewaySecurityConfig {
                 .securityContextRepository(securityContextRepository)
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers(HttpMethod.OPTIONS).permitAll()
-                        .pathMatchers("/api/v1/auth/**", "/eureka/**").permitAll()
+                        .pathMatchers("/api/v1/auth/**", "/eureka/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/webjars/swagger-ui/**", "/swagger-resources/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 .build();

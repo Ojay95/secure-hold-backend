@@ -32,8 +32,8 @@ public class DisputeSecureHoldUseCase {
         // Persist state changes
         Transaction savedTx = transactionRepository.save(tx);
 
-        // Dispatch event
-        kafkaProducer.sendEvent("transaction-events", tx.getReference(), "DISPUTED:" + currentUser + ":" + reason);
+        // Dispatch event (Format: DISPUTED:txId:user:reason)
+        kafkaProducer.sendEvent("transaction-events", tx.getReference(), "DISPUTED:" + tx.getId() + ":" + currentUser + ":" + reason);
 
         return savedTx;
     }

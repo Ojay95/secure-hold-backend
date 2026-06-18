@@ -48,4 +48,11 @@ public class Transaction {
         }
         this.status = "EXPIRED";
     }
+
+    public void refund() {
+        if (!"DISPUTED".equals(status)) {
+            throw new IllegalStateException("Only disputed transactions can be refunded");
+        }
+        this.status = "REFUNDED";
+    }
 }

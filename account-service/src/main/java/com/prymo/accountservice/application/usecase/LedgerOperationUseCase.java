@@ -29,6 +29,16 @@ public class LedgerOperationUseCase {
     }
 
     public UserProfile credit(String username, String senderUsername, BigDecimal amount, boolean isFromSecureHold) {
+        if (username != null && username.contains(":")) {
+            // It is an external transfer payout destination.
+            if (isFromSecureHold) {
+                UserProfile sender = getProfile(senderUsername);
+                sender.releaseHeldEscrow(amount);
+                return repository.save(sender);
+            }
+            return getProfile(senderUsername);
+        }
+
         UserProfile profile = getProfile(username);
         
         if (isFromSecureHold) {
