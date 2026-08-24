@@ -1,5 +1,6 @@
 package com.prymo.disputeservice.infrastructure.client;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -20,6 +21,7 @@ public class TransactionServiceClient {
         this.restTemplate = restTemplate;
     }
 
+    @CircuitBreaker(name = "transactionService", fallbackMethod = "resolveDisputeFallback")
     public void resolveDispute(Long transactionId, String resolution) {
         try {
             String url = "http://transaction-service/api/v1/securehold/" + transactionId + "/resolve";
@@ -37,5 +39,10 @@ public class TransactionServiceClient {
             log.error("Failed to forward dispute resolution [{}] for transactionId {}: {}", resolution, transactionId, e.getMessage());
             throw new RuntimeException("Failed to update transaction status: " + e.getMessage());
         }
+    }
+
+    public void resolveDisputeFallback(Long transactionId, String resolution, Throwable t) {
+        log.error("Circuit breaker 'transactionService' triggered. Failed to resolve dispute for transaction {}. Error: {}", transactionId, t.getMessage());
+        throw new RuntimeException("Transaction service is currently unavailable. Dispute resolution could not be processed.");
     }
 }

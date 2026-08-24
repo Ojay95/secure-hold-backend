@@ -1,5 +1,6 @@
 package com.prymo.accountservice.infrastructure.client;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ public class PaystackClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @CircuitBreaker(name = "paystackResolve", fallbackMethod = "resolveAccountNumberFallback")
     public String resolveAccountNumber(String accountNumber, String bankCode) {
         if (secretKey == null || secretKey.isBlank()) {
             log.info("Paystack secret key is not configured. Skipping account resolution.");
@@ -46,10 +48,15 @@ public class PaystackClient {
                     return resolvedName;
                 }
             }
+            throw new RuntimeException("Paystack returned invalid status or structure: " + response.getBody());
         } catch (Exception e) {
             log.error("Failed to resolve bank account number via Paystack: {}", e.getMessage());
+            throw new RuntimeException("Paystack bank resolution failed: " + e.getMessage(), e);
         }
+    }
 
-        return null;
+    public String resolveAccountNumberFallback(String accountNumber, String bankCode, Throwable t) {
+        log.error("Circuit breaker 'paystackResolve' triggered. Failed to resolve account number {} with bank code {}. Error: {}", accountNumber, bankCode, t.getMessage());
+        throw new RuntimeException("Paystack resolution service is currently unavailable. Account could not be resolved.");
     }
 }

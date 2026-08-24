@@ -1,5 +1,6 @@
 package com.prymo.transactionservice.infrastructure.client;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +24,7 @@ public class PaystackPayoutClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @CircuitBreaker(name = "paystackPayout", fallbackMethod = "initiatePayoutFallback")
     public String initiatePayout(String bankCode, String accountNumber, String accountName, BigDecimal amount, String reference, String reason) {
         if (secretKey == null || secretKey.isBlank()) {
             log.info("Paystack secret key is not configured. Simulating payout/transfer to account {} with mock recipient.", accountNumber);
@@ -49,7 +51,7 @@ public class PaystackPayoutClient {
 
             if (recipientResponse == null || !Boolean.TRUE.equals(recipientResponse.get("status"))) {
                 log.error("Paystack recipient creation failed: {}", recipientResponse);
-                return null;
+                throw new RuntimeException("Failed to create Paystack recipient");
             }
 
             Map data = (Map) recipientResponse.get("data");
@@ -78,11 +80,16 @@ public class PaystackPayoutClient {
                 return transferReference;
             } else {
                 log.error("Paystack transfer initiation failed: {}", transferResponse);
+                throw new RuntimeException("Failed to initiate Paystack transfer");
             }
         } catch (Exception e) {
             log.error("Exception during Paystack transfer execution: {}", e.getMessage());
+            throw new RuntimeException("Paystack API call failed: " + e.getMessage(), e);
         }
+    }
 
-        return null;
+    public String initiatePayoutFallback(String bankCode, String accountNumber, String accountName, BigDecimal amount, String reference, String reason, Throwable t) {
+        log.error("Circuit breaker 'paystackPayout' triggered. Failed to initiate payout to account {} via Paystack. Error: {}", accountNumber, t.getMessage());
+        throw new RuntimeException("Paystack API is currently unavailable. Payout could not be initiated.");
     }
 }
